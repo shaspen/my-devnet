@@ -1,0 +1,27 @@
+##########################################
+#  Interface Configuration Template
+#
+#  device_list:
+#    - 'X.X.X.X'
+#    - 'Y.Y.Y.Y'
+#    - IP Address in the format above
+#
+#  interface_configuration:
+#    - config 1
+#    - config 2
+#    - config 3
+#
+##########################################
+
+device_list:
+  - '10.0.0.1'
+  - '172.16.0.1'
+  - '192.168.0.1'
+
+interface_configuration:
+  - no ip directed-broadcast
+  - no ip proxy-arp
+  - no ip unreachables
+  - no ip redirects
+  - no ip route-cache
+  - no ip mask-reply
