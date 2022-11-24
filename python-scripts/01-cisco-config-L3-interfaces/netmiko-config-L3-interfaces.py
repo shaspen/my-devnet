@@ -4,7 +4,8 @@
 #   Cisco devices dclared in same config.yml file.
 #
 #   Author: Maosud Maghsoudi
-#   Github:    https://github.com/shaspen
+#   Github: https://github.com/shaspen
+#   Gitlab: https://gitlab.com/shaspen
 #   Email:  masoud_maghsoudi@yahoo.com
 #
 ###########################################################################
@@ -89,7 +90,7 @@ def config_interfaces(device, interface_list):
     configs = load_config()
     for interface in interface_list:
         configs.insert(0,"interface {}".format(interface))
-        command = net_connect(configs)
+        command = net_connect.send_config_set(configs)
         print(command)
 
 #MAIN function            
