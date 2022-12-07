@@ -11,6 +11,7 @@
 ###########################################################################
 
 from netmiko import ConnectHandler
+from getpass import getpass
 from datetime import datetime
 from yaml import safe_load
 import os
@@ -121,8 +122,8 @@ if __name__ == "__main__":
     ##############################################################################################################################"""
 
     print(notice)
-    username = input("please enter the username for devices: ").strip()
-    password = input("Please enter password for devices: ").strip()
+    username = input("Please enter the username for devices: ").strip()
+    password = getpass(prompt = "Please enter password for devices: ")
     devices = load_devices()
 
     for device_ip in devices:
