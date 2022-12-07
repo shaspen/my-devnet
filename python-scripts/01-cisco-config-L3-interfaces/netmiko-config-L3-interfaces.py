@@ -77,17 +77,16 @@ def show_interfaces(device):
         'password': password
     }
     net_connect = ConnectHandler(**conn_handler)
-    return net_connect.send_command('show ip interface brief')
+    return net_connect.send_command('show ip interface brief', use_textfsm=True)
 
 # return the list of interfaces with an IP address set on them
 
 
 def l3_interfaces_list(interfaces):
     interface_list = []
-    for line in (interfaces.splitlines()):
-        if line.split()[1] != "unassigned":
-            interface_list.append(line.split()[0])
-    interface_list.pop(0)
+    for interface in interfaces:
+        if interface['ipaddr']!="unassigned":
+            interface_list.append(interface['intf'])
     return interface_list
 
 # configure the interface configuration loaded form config.yml file on each device
