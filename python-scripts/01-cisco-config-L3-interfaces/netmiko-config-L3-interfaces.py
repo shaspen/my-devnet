@@ -3,7 +3,7 @@
 #   This script deploy configurateions declared in config.yml file on
 #   Cisco devices dclared in same config.yml file.
 #
-#   Author: Maosud Maghsoudi
+#   Author: Masoud Maghsoudi
 #   Github: https://github.com/shaspen
 #   Gitlab: https://gitlab.com/shaspen
 #   Email:  masoud_maghsoudi@yahoo.com
