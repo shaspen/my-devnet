@@ -23,5 +23,4 @@ interface_configuration:
   - no ip proxy-arp
   - no ip unreachables
   - no ip redirects
-  - no ip route-cache
   - no ip mask-reply
