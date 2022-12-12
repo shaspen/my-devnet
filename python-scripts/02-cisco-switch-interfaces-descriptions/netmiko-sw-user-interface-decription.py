@@ -47,17 +47,17 @@ def mac_table(sw, vlans):
     for item in command:
         if item['vlan'] in vlans: 
             access_ports.append(item['port'])
-#    print(vlans)
     for vlan in vlans:
-#        print(vlan)
         command = net_connect.send_command(
             'show mac address-table vlan {}'.format(vlan), use_textfsm=True)
-        print(command)
-#        for entry in command:
-#            if entry['vlan'] in vlans and entry['destination_port'][0] in access_ports:
-#                access_port_mac.append(
-#                    (entry['destination_port'][0], entry['destination_address']))
-#    return access_port_mac
+        for entry in command:
+            #with this condition check we try to omit textfsm parsing problems
+            if type(entry) != dict :
+                continue
+            if entry['vlan'] in vlans and entry['destination_port'][0] in access_ports:
+                access_port_mac.append(
+                    (entry['destination_port'][0], entry['destination_address']))
+    return access_port_mac
 
 # backup running configuration to file
 
@@ -159,8 +159,8 @@ if __name__ == "__main__":
         mac_tuple = mac_table(sw, parameters['user_vlan'])
         parameters[sw] = mac_tuple
 
-    print(parameters)
-
+    #print(parameters)
+    
         
     #    interfaces = show_interfaces(device_ip)
     #    l3_interfaces = l3_interfaces_list(interfaces)
