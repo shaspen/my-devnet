@@ -59,6 +59,22 @@ def mac_table(sw, vlans):
                     (entry['destination_port'][0], entry['destination_address']))
     return access_port_mac
 
+# IP TABLE FUNC
+def ip_table(switch, router, mac_tuple):
+    conn_handler = {
+        'device_type': 'cisco_ios',
+        'ip': router,
+        'username': username,
+        'password': password
+    }
+    net_connect = ConnectHandler(**conn_handler)
+    command = net_connect.send_command('show ip arp', use_textfsm=True)
+    #print(command)
+    for entry in command:
+        if entry['mac'] in mac_tuple:
+            print('YES')
+    pass
+
 # backup running configuration to file
 
 
@@ -159,7 +175,12 @@ if __name__ == "__main__":
         mac_tuple = mac_table(sw, parameters['user_vlan'])
         parameters[sw] = mac_tuple
 
-    #print(parameters)
+    for sw in parameters['switch']:
+        ip_tuple = ip_table(sw, parameters['router'][0], parameters[sw])
+        parameters[sw] = (*parameters[sw], ip_tuple)
+
+    print('**************************************************', sep='\n')
+    print(parameters)
     
         
     #    interfaces = show_interfaces(device_ip)
