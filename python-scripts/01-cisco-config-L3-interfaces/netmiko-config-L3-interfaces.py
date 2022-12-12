@@ -20,7 +20,8 @@ import os
 
 
 def load_config():
-    with open("config.yml", 'r') as file:
+    file_path = os.path.dirname(__file__)
+    with open(os.path.join(file_path,"config.yml"), 'r') as file:
         config = safe_load(file)
         return config['interface_configuration']
 
@@ -28,7 +29,8 @@ def load_config():
 
 
 def load_devices():
-    with open("config.yml", 'r') as file:
+    file_path = os.path.dirname(__file__)
+    with open(os.path.join(file_path,"config.yml"), 'r') as file:
         config = safe_load(file)
         return config['device_list']
 
