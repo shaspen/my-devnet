@@ -59,6 +59,22 @@ def mac_table(sw, vlans):
                     (entry['destination_port'][0], entry['destination_address']))
     return access_port_mac
 
+# ARP TABLE FUNC
+def arp_table(router, mac_list):
+    conn_handler = {
+        'device_type': 'cisco_ios',
+        'ip': router,
+        'username': username,
+        'password': password
+    }
+    arp = []
+    net_connect = ConnectHandler(**conn_handler)
+    command = net_connect.send_command('show ip arp', use_textfsm=True)
+    print(command, sep='\n')
+    for entry in command:
+        arp.append({entry['mac']:entry['address']})
+    return arp
+
 # IP TABLE FUNC
 def ip_table(switch, router, mac_tuple):
     conn_handler = {
@@ -67,12 +83,17 @@ def ip_table(switch, router, mac_tuple):
         'username': username,
         'password': password
     }
+    result = mac_tuple
+    arp_table = []
     net_connect = ConnectHandler(**conn_handler)
     command = net_connect.send_command('show ip arp', use_textfsm=True)
-    #print(command)
-    for entry in command:
-        if entry['mac'] in mac_tuple:
-            print('YES')
+    print(command)
+    #print(result)
+    #for entry in command:
+    #    if entry['mac'] in mac_tuple:
+    #        print('YES')
+    for i in range(len(mac_tuple)):
+        pass
     pass
 
 # backup running configuration to file
@@ -170,14 +191,16 @@ if __name__ == "__main__":
     password = '123qwe'
     parameters = load_configuration()
 
+    arp_list = arp_table(parameters['router'][0], parameters['user_vlan'])
+    print(arp_list)
 
     for sw in parameters['switch']:
         mac_tuple = mac_table(sw, parameters['user_vlan'])
         parameters[sw] = mac_tuple
 
-    for sw in parameters['switch']:
-        ip_tuple = ip_table(sw, parameters['router'][0], parameters[sw])
-        parameters[sw] = (*parameters[sw], ip_tuple)
+#    for sw in parameters['switch']:
+#        ip_tuple = ip_table(sw, parameters['router'][0], parameters[sw])
+#        parameters[sw] = (*parameters[sw], ip_tuple)
 
     print('**************************************************', sep='\n')
     print(parameters)
