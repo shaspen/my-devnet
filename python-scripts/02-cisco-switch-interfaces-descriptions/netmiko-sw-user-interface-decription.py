@@ -60,41 +60,31 @@ def mac_table(sw, vlans):
     return access_port_mac
 
 # ARP TABLE FUNC
-def arp_table(router, mac_list):
+def arp_table(router):
     conn_handler = {
         'device_type': 'cisco_ios',
         'ip': router,
         'username': username,
         'password': password
     }
-    arp = []
+    arp = {}
     net_connect = ConnectHandler(**conn_handler)
     command = net_connect.send_command('show ip arp', use_textfsm=True)
-    print(command, sep='\n')
+#    print(command, sep='\n')
     for entry in command:
-        arp.append({entry['mac']:entry['address']})
+        arp[entry['mac']] = entry['address']
     return arp
 
 # IP TABLE FUNC
-def ip_table(switch, router, mac_tuple):
-    conn_handler = {
-        'device_type': 'cisco_ios',
-        'ip': router,
-        'username': username,
-        'password': password
-    }
-    result = mac_tuple
-    arp_table = []
-    net_connect = ConnectHandler(**conn_handler)
-    command = net_connect.send_command('show ip arp', use_textfsm=True)
-    print(command)
-    #print(result)
-    #for entry in command:
-    #    if entry['mac'] in mac_tuple:
-    #        print('YES')
-    for i in range(len(mac_tuple)):
-        pass
-    pass
+def ip_table(mac_tuple_list, arp_dict):
+    result = []
+    for mac_tuple in mac_tuple_list:
+        for key, value in arp_dict.items():
+            if mac_tuple[1] == key:
+                result.append((*mac_tuple, value))
+            else:
+                continue
+    return result
 
 # backup running configuration to file
 
@@ -191,16 +181,16 @@ if __name__ == "__main__":
     password = '123qwe'
     parameters = load_configuration()
 
-    arp_list = arp_table(parameters['router'][0], parameters['user_vlan'])
-    print(arp_list)
+    arp_dict = arp_table(parameters['router'][0])
 
     for sw in parameters['switch']:
         mac_tuple = mac_table(sw, parameters['user_vlan'])
         parameters[sw] = mac_tuple
 
-#    for sw in parameters['switch']:
-#        ip_tuple = ip_table(sw, parameters['router'][0], parameters[sw])
-#        parameters[sw] = (*parameters[sw], ip_tuple)
+    for sw in parameters['switch']:
+        mac_ip_tuple = ip_table(parameters[sw], arp_dict)
+        parameters[sw] = mac_ip_tuple
+
 
     print('**************************************************', sep='\n')
     print(parameters)
