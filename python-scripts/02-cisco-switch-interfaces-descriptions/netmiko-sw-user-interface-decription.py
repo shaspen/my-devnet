@@ -14,7 +14,9 @@ from netmiko import ConnectHandler
 from getpass import getpass
 from datetime import datetime
 from yaml import safe_load
+from dns import resolver, reversename
 import os
+
 
 # load interface configuration from config.yml file
 
@@ -26,16 +28,31 @@ def load_configuration():
         params['router'] = config['router']
         params['switch'] = config['switch_list']
         params['user_vlan'] = config['user_vlan']
-        params['dns_server'] = config['dns_server']
+        params['dns_servers'] = config['dns_server_list']
         return params
 
-        
+
+# ARP TABLE FUNC
+def arp_table(router):
+    conn_handler = {
+        'device_type': 'cisco_ios',
+        'ip': router,
+        'username': username,
+        'password': password
+    }
+    result = {}
+    net_connect = ConnectHandler(**conn_handler)
+    command = net_connect.send_command('show ip arp', use_textfsm=True)
+    for entry in command:
+        result[entry['mac']] = entry['address']
+    return result
+
 
 # MAC TABLE FUNC
 
 def mac_table(sw, vlans):
     access_ports = []
-    access_port_mac = []
+    result = []
     conn_handler = {
         'device_type': 'cisco_ios',
         'ip': sw,
@@ -55,25 +72,9 @@ def mac_table(sw, vlans):
             if type(entry) != dict :
                 continue
             if entry['vlan'] in vlans and entry['destination_port'][0] in access_ports:
-                access_port_mac.append(
+                result.append(
                     (entry['destination_port'][0], entry['destination_address']))
-    return access_port_mac
-
-# ARP TABLE FUNC
-def arp_table(router):
-    conn_handler = {
-        'device_type': 'cisco_ios',
-        'ip': router,
-        'username': username,
-        'password': password
-    }
-    arp = {}
-    net_connect = ConnectHandler(**conn_handler)
-    command = net_connect.send_command('show ip arp', use_textfsm=True)
-#    print(command, sep='\n')
-    for entry in command:
-        arp[entry['mac']] = entry['address']
-    return arp
+    return result
 
 # IP TABLE FUNC
 def ip_table(mac_tuple_list, arp_dict):
@@ -85,6 +86,22 @@ def ip_table(mac_tuple_list, arp_dict):
             else:
                 continue
     return result
+
+# DNS Query
+def dns_query(mac_ip_tuple_list, dns_servers):
+    result = []
+    res = resolver.Resolver(configure=True)
+    res.nameservers = dns_servers
+    q_type = 'PTR'
+    for mac_ip_tuple in mac_ip_tuple_list:
+        q_addr = reversename.from_address(mac_ip_tuple[2])
+        try:
+            query = res.resolve(q_addr, q_type)[0]
+        except:
+            print("DNS Not Found")
+        else:
+            print(query)
+    pass
 
 # backup running configuration to file
 
@@ -179,8 +196,8 @@ if __name__ == "__main__":
     username = 'm.maghsoudi'
     #password = getpass(prompt = "Please enter password for devices: ")
     password = '123qwe'
+    
     parameters = load_configuration()
-
     arp_dict = arp_table(parameters['router'][0])
 
     for sw in parameters['switch']:
@@ -191,6 +208,12 @@ if __name__ == "__main__":
         mac_ip_tuple = ip_table(parameters[sw], arp_dict)
         parameters[sw] = mac_ip_tuple
 
+    test = dns_query(parameters[sw], parameters['dns_servers'])
+    print(test)
+
+#    for sw in parameters['switch']:
+#        mac_ip_dns_tuple = dns_query(parameters[sw], parameters['dns_servers'])
+#        parameters[sw] = mac_ip_dns_tuple
 
     print('**************************************************', sep='\n')
     print(parameters)
