@@ -9,6 +9,7 @@
 """
 
 import os
+import csv
 from datetime import datetime
 from getpass import getpass
 from netmiko import ConnectHandler
@@ -139,7 +140,7 @@ def dns_query(mac_ip_tuple_list, dns_servers) -> list:
     return result
 
 def backup_config(device) -> None:
-    """ Backup running configuration to file# backup running configuration to file
+    """ Backup running configuration to file
 
     Args:
         device (str): Device IP address
@@ -174,6 +175,27 @@ def write_startup_config(device) -> None:
     net_connect = ConnectHandler(**conn_handler)
     command = net_connect.send_command('write memory')
     print(command)
+
+def csv_report(data) -> None:
+    """ Generates CSV file from proccessed data
+
+    Args:
+        data (dict): Interface, MAC, IP, Name data of active users
+                     on each switch
+    """
+    folder = "csv_reports"
+    if not os.path.isdir(folder):
+        os.makedirs(folder)
+    filename = f"{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}_switch_ports_report.csv"
+    with open(os.path.join(folder, filename), 'w', encoding="utf-8", newline='') as file:
+        header_fields = ['Switch IP', 'Interface', 'MAC address', 'IP address', 'User']
+        report_writer = csv.writer(file, delimiter=',')
+        report_writer.writerow(header_fields)
+
+        for key, values in data.items():
+            for value in values:
+                row = [key, *value]
+                report_writer.writerow(row)
 
 #def config_interfaces(device, interface_list) -> None:
 #    """ Configure the interface configuration loaded form config.yml file
@@ -236,6 +258,8 @@ if __name__ == "__main__":
     print('################################################################', sep='\n')
     print(switch_data)
     print('################################################################', sep='\n')
+
+    csv_report(switch_data)
 
     #    config_interfaces(device_ip, l3_interfaces)
 
