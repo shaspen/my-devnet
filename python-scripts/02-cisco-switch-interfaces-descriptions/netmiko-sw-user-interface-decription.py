@@ -10,20 +10,23 @@
 #
 ###########################################################################
 
+import os
+from datetime import datetime
 from netmiko import ConnectHandler
 from getpass import getpass
-from datetime import datetime
 from yaml import safe_load
 from dns import resolver, reversename
-import os
 
 
-# load interface configuration from config.yml file
+def load_configuration() -> dict:
+    """ Loads interface configuration from config.yml file
 
-def load_configuration():
+    Returns:
+        dict: loaded parameters from config file
+    """
     params = {}
     file_path = os.path.dirname(__file__)
-    with open(os.path.join(file_path, "config.yml"), 'r') as file:
+    with open(os.path.join(file_path, "config.yml"), 'r', encoding="utf-8") as file:
         config = safe_load(file)
         params['router'] = config['router']
         params['switch'] = config['switch_list']
@@ -31,15 +34,20 @@ def load_configuration():
         params['dns_servers'] = config['dns_server_list']
         return params
 
+def arp_table(router) -> dict:
+    """arp_table function connects to a router and returns arp table of the router in dictionary
 
-# arp_table function connects to a router and returns arp table of the router in dictionary
+    Args:
+        router (str): router IP address
 
-def arp_table(router):
+    Returns:
+        dict: router arp table
+    """
     conn_handler = {
         'device_type': 'cisco_ios',
         'ip': router,
-        'username': username,
-        'password': password
+        'username': USERNAME,
+        'password': PASSWORD
     }
     result = {}
     net_connect = ConnectHandler(**conn_handler)
@@ -48,18 +56,24 @@ def arp_table(router):
         result[entry['mac']] = entry['address']
     return result
 
+def mac_table(switch, vlans) -> list:
+    """mac_table function connects to switches and returns switch mac table
+    for access ports with vlans defined in configuration file
 
-# mac_table function connects to switches and returns mac table of switch for
-#  access ports with vlans defined in configuration file
+    Args:
+        switch (str): switch IP address
+        vlans (list): list of user vlans
 
-def mac_table(sw, vlans):
+    Returns:
+        list: switch mac table for specified vlans
+    """
     access_ports = []
     result = []
     conn_handler = {
         'device_type': 'cisco_ios',
-        'ip': sw,
-        'username': username,
-        'password': password
+        'ip': switch,
+        'username': USERNAME,
+        'password': PASSWORD
     }
     net_connect = ConnectHandler(**conn_handler)
     command = net_connect.send_command(
@@ -68,21 +82,28 @@ def mac_table(sw, vlans):
         if item['vlan'] in vlans:
             access_ports.append(item['port'])
     for vlan in vlans:
-        command = net_connect.send_command(
-            'show mac address-table vlan {}'.format(vlan), use_textfsm=True)
+        command = net_connect.send_command(f'show mac address-table vlan {vlan}', use_textfsm=True)
         for entry in command:
             # with this condition check we try to exclude textfsm parsing errors
-            if type(entry) != dict:
+            if not isinstance(entry, dict):
                 continue
             if entry['vlan'] in vlans and entry['destination_port'][0] in access_ports:
                 result.append(
                     (entry['destination_port'][0], entry['destination_address']))
     return result
 
-# ip table function uses result of mac table of switches and arp table of routers to cunstruct
-#  a list consist of port, mac and ip address of active devices on the switch port
+def ip_table(mac_tuple_list, arp_dict) -> list:
+    """ ip table function uses result of mac table of switches and arp table of
+        routers to cunstruct a list consist of port, mac and ip address of
+        active devices on the switch port
 
-def ip_table(mac_tuple_list, arp_dict):
+    Args:
+        mac_tuple_list (list): MAC address table
+        arp_dict (dict): router ARP table
+
+    Returns:
+        list: add IP address to corresponding MAC data
+    """
     result = []
     for mac_tuple in mac_tuple_list:
         for key, value in arp_dict.items():
@@ -92,10 +113,17 @@ def ip_table(mac_tuple_list, arp_dict):
                 continue
     return result
 
-# dns query function queries the ip addresses and add the stripped form of associated
-# "A" record to data structure
+def dns_query(mac_ip_tuple_list, dns_servers) -> list:
+    """ This function queries the ip addresses and add the stripped form of
+        associated "A" record to data structure
 
-def dns_query(mac_ip_tuple_list, dns_servers):
+    Args:
+        mac_ip_tuple_list (list): list of data including IP addresses
+        dns_servers (list): nameservers used for DNS query
+
+    Returns:
+        list: adds corresponfing name resolved from DNS to data structure
+    """
     result = []
     res = resolver.Resolver(configure=True)
     res.nameservers = dns_servers
@@ -104,6 +132,7 @@ def dns_query(mac_ip_tuple_list, dns_servers):
         q_addr = reversename.from_address(mac_ip_tuple[2])
         try:
             query = res.resolve(q_addr, q_type)[0]
+        # DNS resovler raises an NXDOMAIN exception if could not find any answer for query
         except:
             result.append((*mac_ip_tuple, "DNS Not Found"))
         else:
@@ -111,86 +140,93 @@ def dns_query(mac_ip_tuple_list, dns_servers):
             result.append((*mac_ip_tuple, query_stripped))
     return result
 
-# backup running configuration to file
+def backup_config(device) -> None:
+    """ Backup running configuration to file# backup running configuration to file
 
-def backup_config(device):
+    Args:
+        device (str): Device IP address
+    """
     conn_handler = {
         'device_type': 'cisco_ios',
         'ip': device,
-        'username': username,
-        'password': password
+        'username': USERNAME,
+        'password': PASSWORD
     }
     net_connect = ConnectHandler(**conn_handler)
     folder = "config_backup_files"
     if not os.path.isdir(folder):
         os.makedirs(folder)
-    filename = "{}-{}-backup.config".format(
-        datetime.now().strftime('%Y-%m-%d-%H-%M-%S'), conn_handler['ip'])
-    with open(os.path.join(folder, filename), 'w') as file:
+    filename = f"{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}-{conn_handler['ip']}-backup.config"
+    with open(os.path.join(folder, filename), 'w', encoding="utf-8") as file:
         backup = net_connect.send_command("show running-config")
         file.write(backup)
 
-# return the output of command <show ip interface brief> as string
+def write_startup_config(device) -> None:
+    """ Writes running-config to startup-config
 
-def write_startup_config(device):
+    Args:
+        device (str): Device IP address
+    """
     conn_handler = {
         'device_type': 'cisco_ios',
         'ip': device,
-        'username': username,
-        'password': password
+        'username': USERNAME,
+        'password': PASSWORD
     }
     net_connect = ConnectHandler(**conn_handler)
     command = net_connect.send_command('write memory')
     print(command)
 
-# configure the interface configuration loaded form config.yml file on each device
-# before deploying any config it make a backup file via backup_config function
-
-"""
-def config_interfaces(device, interface_list):
-    conn_handler = {
-        'device_type': 'cisco_ios',
-        'ip': device,
-        'username': username,
-        'password': password
-    }
-    net_connect = ConnectHandler(**conn_handler)
-    backup_config(device)
-    configs = load_config()
-    for interface in interface_list:
-        interface_fullname = ''
-        interface_fullname = "interface {}".format(interface)
-        command = net_connect.send_config_set([interface_fullname] + configs)
-        print(command)
-"""
+#def config_interfaces(device, interface_list) -> None:
+#    """ Configure the interface configuration loaded form config.yml file
+#        on each device before deploying any config it make a backup file via
+#        backup_config function
+#
+#    Args:
+#        device (str): Device IP address
+#        interface_list (list): Interfaces to be configured
+#    """
+#    conn_handler = {
+#        'device_type': 'cisco_ios',
+#        'ip': device,
+#        'username': USERNAME,
+#        'password': PASSWORD
+#    }
+#    net_connect = ConnectHandler(**conn_handler)
+#    backup_config(device)
+#    configs = load_config()
+#    for interface in interface_list:
+#        interface_fullname = ''
+#        interface_fullname = "interface {}".format(interface)
+#        command = net_connect.send_config_set([interface_fullname] + configs)
+#        print(command)
 
 # MAIN function
-
 if __name__ == "__main__":
 
-    notice = """    ##############################################################################################################################
+    NOTICE = """    ##############################################################################################################################
     #                                                                                                                            #
     # NOTICE: You are changing the configration on Cisco devices based on configuratoni and devices declarted in config.yml file #
     #         Please do not proceed if you do not know the effects of deplying configurations you are applying.                  #
     #                                                                                                                            #
     ##############################################################################################################################"""
 
-#    print(notice)
-    #username = input("Please enter the username for devices: ").strip()
-    username = 'm.maghsoudi'
-    #password = getpass(prompt = "Please enter password for devices: ")
-    password = '123qwe'
+#    print(NOTICE)
+    #USERNAME = input("Please enter the username for devices: ").strip()
+    USERNAME = 'm.maghsoudi'
+    #PASSWORD = getpass(prompt = "Please enter password for devices: ")
+    PASSWORD = '123qwe'
 
     parameters = load_configuration()
-    arp_dict = arp_table(parameters['router'][0])
+    ARP = arp_table(parameters['router'][0])
 
     for sw in parameters['switch']:
-        mac_tuple = mac_table(sw, parameters['user_vlan'])
-        parameters[sw] = mac_tuple
+        MAC = mac_table(sw, parameters['user_vlan'])
+        parameters[sw] = MAC
 
     for sw in parameters['switch']:
-        mac_ip_tuple = ip_table(parameters[sw], arp_dict)
-        parameters[sw] = mac_ip_tuple
+        MAC_IP = ip_table(parameters[sw], ARP)
+        parameters[sw] = MAC_IP
 
     for sw in parameters['switch']:
         mac_ip_dns_tuple = dns_query(parameters[sw], parameters['dns_servers'])
