@@ -1,19 +1,17 @@
-###########################################################################
-#
-#   This script deploy configurateions declared in config.yml file on
-#   Cisco devices dclared in same config.yml file.
-#
-#   Author: Masoud Maghsoudi
-#   Github: https://github.com/shaspen
-#   Gitlab: https://gitlab.com/shaspen
-#   Email:  masoud_maghsoudi@yahoo.com
-#
-###########################################################################
+"""
+   This script deploy configurateions declared in config.yml file on
+   Cisco devices dclared in same config.yml file.
+
+   Author: Masoud Maghsoudi
+   Github: https://github.com/shaspen
+   Gitlab: https://gitlab.com/shaspen
+   Email:  masoud_maghsoudi@yahoo.com
+"""
 
 import os
 from datetime import datetime
-from netmiko import ConnectHandler
 from getpass import getpass
+from netmiko import ConnectHandler
 from yaml import safe_load
 from dns import resolver, reversename
 
