@@ -32,18 +32,18 @@ def load_configuration() -> dict:
         params['dns_servers'] = config['dns_server_list']
         return params
 
-def arp_table(router) -> dict:
+def arp_table(device) -> dict:
     """arp_table function connects to a router and returns arp table of the router in dictionary
 
     Args:
-        router (str): router IP address
+        device (str): router IP address
 
     Returns:
         dict: router arp table
     """
     conn_handler = {
         'device_type': 'cisco_ios',
-        'ip': router,
+        'ip': device,
         'username': USERNAME,
         'password': PASSWORD
     }
@@ -54,12 +54,12 @@ def arp_table(router) -> dict:
         result[entry['mac']] = entry['address']
     return result
 
-def mac_table(switch, vlans) -> list:
+def mac_table(device, vlans) -> list:
     """mac_table function connects to switches and returns switch mac table
     for access ports with vlans defined in configuration file
 
     Args:
-        switch (str): switch IP address
+        device (str): switch IP address
         vlans (list): list of user vlans
 
     Returns:
@@ -69,7 +69,7 @@ def mac_table(switch, vlans) -> list:
     result = []
     conn_handler = {
         'device_type': 'cisco_ios',
-        'ip': switch,
+        'ip': device,
         'username': USERNAME,
         'password': PASSWORD
     }
@@ -202,43 +202,45 @@ def write_startup_config(device) -> None:
 # MAIN function
 if __name__ == "__main__":
 
-    NOTICE = """    ##############################################################################################################################
-    #                                                                                                                            #
-    # NOTICE: You are changing the configration on Cisco devices based on configuratoni and devices declarted in config.yml file #
-    #         Please do not proceed if you do not know the effects of deplying configurations you are applying.                  #
-    #                                                                                                                            #
-    ##############################################################################################################################"""
-
-#    print(NOTICE)
+    NOTICE = """    #############################################################################################
+    #                                                                                           #
+    # NOTICE: You are changing the configration on Cisco devices based on configuration         #
+    #         and devices declarted in config.yml file                                          #
+    #                                                                                           #
+    #         Please do not proceed if you do not know the effects of deplying                  #
+    #                         configurations you are applying.                                  #
+    #                                                                                           #
+    #############################################################################################"""
+    print(NOTICE)
     #USERNAME = input("Please enter the username for devices: ").strip()
     USERNAME = 'm.maghsoudi'
     #PASSWORD = getpass(prompt = "Please enter password for devices: ")
     PASSWORD = '123qwe'
 
-    parameters = load_configuration()
-    ARP = arp_table(parameters['router'][0])
+    configs = load_configuration()
+    ARP = arp_table(configs['router'][0])
+    switch_data = {}
 
-    for sw in parameters['switch']:
-        MAC = mac_table(sw, parameters['user_vlan'])
-        parameters[sw] = MAC
+    for switch in configs['switch']:
+        switch_data[switch] = mac_table(switch, configs['user_vlan'])
 
-    for sw in parameters['switch']:
-        MAC_IP = ip_table(parameters[sw], ARP)
-        parameters[sw] = MAC_IP
+    for switch in configs['switch']:
+        switch_data[switch] = ip_table(switch_data[switch], ARP)
 
-    for sw in parameters['switch']:
-        mac_ip_dns_tuple = dns_query(parameters[sw], parameters['dns_servers'])
-        parameters[sw] = mac_ip_dns_tuple
+    for switch in configs['switch']:
+        switch_data[switch] = dns_query(
+            switch_data[switch], configs['dns_servers'])
 
-    print('**************************************************', sep='\n')
-    print(parameters)
+    print('################################################################', sep='\n')
+    print(configs)
+    print('################################################################', sep='\n')
+    print(switch_data)
+    print('################################################################', sep='\n')
 
-    #    interfaces = show_interfaces(device_ip)
-    #    l3_interfaces = l3_interfaces_list(interfaces)
     #    config_interfaces(device_ip, l3_interfaces)
 
     # save_prompt = input(
-    #    "Are you sure to write configuration on Start-up conifuration? [y/n] (default=no) ").strip()
+    #    "Are you sure to write configuration on Start-up conifuration? [y/n] (default=no)").strip()
     # if save_prompt[0] == 'y' or save_prompt[0] == 'Y':
     #    for device in devices:
     #        write_startup_config(device)
