@@ -131,7 +131,7 @@ def config_interfaces(device, interface_list) -> None:
 # MAIN function
 if __name__ == "__main__":
 
-    NOTICE = """    ############################################################################################
+    NOTICE = """    #############################################################################################
     #                                                                                           #
     # NOTICE: You are changing the configration on Cisco devices based on configuration         #
     #         and devices declarted in config.yml file                                          #
@@ -139,7 +139,7 @@ if __name__ == "__main__":
     #         Please do not proceed if you do not know the effects of deplying                  #
     #                         configurations you are applying.                                  #
     #                                                                                           #
-    ############################################################################################"""
+    #############################################################################################"""
 
     print(NOTICE)
     USERNAME = input("Please enter the username for devices: ").strip()
