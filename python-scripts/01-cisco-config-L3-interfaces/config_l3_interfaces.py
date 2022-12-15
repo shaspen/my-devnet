@@ -131,27 +131,30 @@ def config_interfaces(device, interface_list) -> None:
 # MAIN function
 if __name__ == "__main__":
 
-    notice = """    ##############################################################################################################################
-    #                                                                                                                            #
-    # NOTICE: You are changing the configration on Cisco devices based on configuratoni and devices declarted in config.yml file #
-    #         Please do not proceed if you do not know the effects of deplying configurations you are applying.                  #
-    #                                                                                                                            #
-    ##############################################################################################################################"""
+    NOTICE = """    ############################################################################################
+    #                                                                                           #
+    # NOTICE: You are changing the configration on Cisco devices based on configuration         #
+    #         and devices declarted in config.yml file                                          #
+    #                                                                                           #
+    #         Please do not proceed if you do not know the effects of deplying                  #
+    #                         configurations you are applying.                                  #
+    #                                                                                           #
+    ############################################################################################"""
 
-    print(notice)
+    print(NOTICE)
     USERNAME = input("Please enter the username for devices: ").strip()
     PASSWORD = getpass(prompt="Please enter password for devices: ")
     devices = load_devices()
 
     for device_ip in devices:
-        interfaces = show_interfaces(device_ip)
-        l3_interfaces = l3_interfaces_list(interfaces)
+        interfaces_list = show_interfaces(device_ip)
+        l3_interfaces = l3_interfaces_list(interfaces_list)
         config_interfaces(device_ip, l3_interfaces)
 
     save_prompt = input(
         "Are you sure to write configuration on Start-up conifuration? [y/n] (default=no) ").strip()
     if save_prompt[0] == 'y' or save_prompt[0] == 'Y':
-        for device in devices:
-            write_startup_config(device)
+        for device_ip in devices:
+            write_startup_config(device_ip)
     else:
         print("Deplyed configurations has not been written on Startup configuration")
