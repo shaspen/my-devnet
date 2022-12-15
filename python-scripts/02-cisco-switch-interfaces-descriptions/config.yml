@@ -28,5 +28,5 @@ user_vlan:
 router:
   - '192.168.0.2'
 
-dns_server:
+dns_server_list:
   - '8.8.8.8'
