@@ -23,7 +23,7 @@ import os
 def load_configuration():
     params = {}
     file_path = os.path.dirname(__file__)
-    with open(os.path.join(file_path,"config.yml"), 'r') as file:
+    with open(os.path.join(file_path, "config.yml"), 'r') as file:
         config = safe_load(file)
         params['router'] = config['router']
         params['switch'] = config['switch_list']
@@ -32,7 +32,8 @@ def load_configuration():
         return params
 
 
-# ARP TABLE FUNC
+# arp_table function connects to a router and returns arp table of the router in dictionary
+
 def arp_table(router):
     conn_handler = {
         'device_type': 'cisco_ios',
@@ -48,7 +49,8 @@ def arp_table(router):
     return result
 
 
-# MAC TABLE FUNC
+# mac_table function connects to switches and returns mac table of switch for
+#  access ports with vlans defined in configuration file
 
 def mac_table(sw, vlans):
     access_ports = []
@@ -60,23 +62,26 @@ def mac_table(sw, vlans):
         'password': password
     }
     net_connect = ConnectHandler(**conn_handler)
-    command = net_connect.send_command('show interfaces status', use_textfsm=True)
+    command = net_connect.send_command(
+        'show interfaces status', use_textfsm=True)
     for item in command:
-        if item['vlan'] in vlans: 
+        if item['vlan'] in vlans:
             access_ports.append(item['port'])
     for vlan in vlans:
         command = net_connect.send_command(
             'show mac address-table vlan {}'.format(vlan), use_textfsm=True)
         for entry in command:
-            #with this condition check we try to omit textfsm parsing problems
-            if type(entry) != dict :
+            # with this condition check we try to exclude textfsm parsing errors
+            if type(entry) != dict:
                 continue
             if entry['vlan'] in vlans and entry['destination_port'][0] in access_ports:
                 result.append(
                     (entry['destination_port'][0], entry['destination_address']))
     return result
 
-# IP TABLE FUNC
+# ip table function uses result of mac table of switches and arp table of routers to cunstruct
+#  a list consist of port, mac and ip address of active devices on the switch port
+
 def ip_table(mac_tuple_list, arp_dict):
     result = []
     for mac_tuple in mac_tuple_list:
@@ -87,7 +92,9 @@ def ip_table(mac_tuple_list, arp_dict):
                 continue
     return result
 
-# DNS Query
+# dns query function queries the ip addresses and add the stripped form of associated
+# "A" record to data structure
+
 def dns_query(mac_ip_tuple_list, dns_servers):
     result = []
     res = resolver.Resolver(configure=True)
@@ -98,13 +105,13 @@ def dns_query(mac_ip_tuple_list, dns_servers):
         try:
             query = res.resolve(q_addr, q_type)[0]
         except:
-            print("DNS Not Found")
+            result.append((*mac_ip_tuple, "DNS Not Found"))
         else:
-            print(query)
-    pass
+            query_stripped = str(query).partition('.')[0]
+            result.append((*mac_ip_tuple, query_stripped))
+    return result
 
 # backup running configuration to file
-
 
 def backup_config(device):
     conn_handler = {
@@ -125,7 +132,6 @@ def backup_config(device):
 
 # return the output of command <show ip interface brief> as string
 
-
 def write_startup_config(device):
     conn_handler = {
         'device_type': 'cisco_ios',
@@ -137,29 +143,6 @@ def write_startup_config(device):
     command = net_connect.send_command('write memory')
     print(command)
 
-# return the output of command <show ip interface brief> as string
-
-
-def show_interfaces(device):
-    conn_handler = {
-        'device_type': 'cisco_ios',
-        'ip': device,
-        'username': username,
-        'password': password
-    }
-    net_connect = ConnectHandler(**conn_handler)
-    return net_connect.send_command('show ip interface brief', use_textfsm=True)
-
-# return the list of interfaces with an IP address set on them
-
-"""
-def l3_interfaces_list(interfaces):
-    interface_list = []
-    for interface in interfaces:
-        if interface['ipaddr']!="unassigned":
-            interface_list.append(interface['intf'])
-    return interface_list
-"""
 # configure the interface configuration loaded form config.yml file on each device
 # before deploying any config it make a backup file via backup_config function
 
@@ -182,6 +165,7 @@ def config_interfaces(device, interface_list):
 """
 
 # MAIN function
+
 if __name__ == "__main__":
 
     notice = """    ##############################################################################################################################
@@ -196,7 +180,7 @@ if __name__ == "__main__":
     username = 'm.maghsoudi'
     #password = getpass(prompt = "Please enter password for devices: ")
     password = '123qwe'
-    
+
     parameters = load_configuration()
     arp_dict = arp_table(parameters['router'][0])
 
@@ -208,25 +192,21 @@ if __name__ == "__main__":
         mac_ip_tuple = ip_table(parameters[sw], arp_dict)
         parameters[sw] = mac_ip_tuple
 
-    test = dns_query(parameters[sw], parameters['dns_servers'])
-    print(test)
-
-#    for sw in parameters['switch']:
-#        mac_ip_dns_tuple = dns_query(parameters[sw], parameters['dns_servers'])
-#        parameters[sw] = mac_ip_dns_tuple
+    for sw in parameters['switch']:
+        mac_ip_dns_tuple = dns_query(parameters[sw], parameters['dns_servers'])
+        parameters[sw] = mac_ip_dns_tuple
 
     print('**************************************************', sep='\n')
     print(parameters)
-    
-        
+
     #    interfaces = show_interfaces(device_ip)
     #    l3_interfaces = l3_interfaces_list(interfaces)
     #    config_interfaces(device_ip, l3_interfaces)
 
-    #save_prompt = input(
+    # save_prompt = input(
     #    "Are you sure to write configuration on Start-up conifuration? [y/n] (default=no) ").strip()
-    #if save_prompt[0] == 'y' or save_prompt[0] == 'Y':
+    # if save_prompt[0] == 'y' or save_prompt[0] == 'Y':
     #    for device in devices:
     #        write_startup_config(device)
-    #else:
+    # else:
     #    print("Deplyed configurations has not been written on Startup configuration")
