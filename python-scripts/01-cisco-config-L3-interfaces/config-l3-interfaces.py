@@ -1,114 +1,129 @@
-###########################################################################
-#
-#   This script deploy configurateions declared in config.yml file on
-#   Cisco devices dclared in same config.yml file.
-#
-#   Author: Masoud Maghsoudi
-#   Github: https://github.com/shaspen
-#   Gitlab: https://gitlab.com/shaspen
-#   Email:  masoud_maghsoudi@yahoo.com
-#
-###########################################################################
+"""
+   This script deploy configurateions declared in config.yml file on
+   Cisco devices dclared in same config.yml file.
 
-from netmiko import ConnectHandler
-from getpass import getpass
-from datetime import datetime
-from yaml import safe_load
+   Author: Masoud Maghsoudi
+   Github: https://github.com/shaspen
+   Gitlab: https://gitlab.com/shaspen
+   Email:  masoud_maghsoudi@yahoo.com
+"""
+
 import os
+from datetime import datetime
+from getpass import getpass
+from netmiko import ConnectHandler
+from yaml import safe_load
 
-# load interface configuration from config.yml file
+def load_config() -> list:
+    """ Loads interface configurations from config.yml file
 
-
-def load_config():
-    file_path = os.path.dirname(__file__)
-    with open(os.path.join(file_path,"config.yml"), 'r') as file:
+    Returns:
+        list: Interface configurations
+    """
+    with open("config.yml", 'r', encoding="utf-8") as file:
         config = safe_load(file)
         return config['interface_configuration']
 
-# load device IPs from config.yml file
+def load_devices() -> list:
+    """ Load device IPs from config.yml file
 
-
-def load_devices():
-    file_path = os.path.dirname(__file__)
-    with open(os.path.join(file_path,"config.yml"), 'r') as file:
+    Returns:
+        list: IP address of devices to be configured
+    """
+    with open("config.yml", 'r', encoding="utf-8") as file:
         config = safe_load(file)
         return config['device_list']
 
-# backup running configuration to file
+def backup_config(device) -> None:
+    """ Backup running configuration to file
 
-
-def backup_config(device):
+    Args:
+        device (str): Device IP address
+    """
     conn_handler = {
         'device_type': 'cisco_ios',
         'ip': device,
-        'username': username,
-        'password': password
+        'username': USERNAME,
+        'password': PASSWORD
     }
     net_connect = ConnectHandler(**conn_handler)
-    file_path = os.path.dirname(__file__)
-    folder = os.path.join(file_path,"config_backup_files")
+    folder = "config_backup_files"
     if not os.path.isdir(folder):
         os.makedirs(folder)
-    filename = "{}-{}-backup.config".format(
-        datetime.now().strftime('%Y-%m-%d-%H-%M-%S'), conn_handler['ip'])
-    with open(os.path.join(folder, filename), 'w') as file:
+    filename = f"{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}-{conn_handler['ip']}-backup.config"
+    with open(os.path.join(folder, filename), 'w', encoding="utf-8") as file:
         backup = net_connect.send_command("show running-config")
         file.write(backup)
 
-# return the output of command <show ip interface brief> as string
+def write_startup_config(device) -> None:
+    """ Writes running-config to startup-config
 
-
-def write_startup_config(device):
+    Args:
+        device (str): Device IP address
+    """
     conn_handler = {
         'device_type': 'cisco_ios',
         'ip': device,
-        'username': username,
-        'password': password
+        'username': USERNAME,
+        'password': PASSWORD
     }
     net_connect = ConnectHandler(**conn_handler)
     command = net_connect.send_command('write memory')
     print(command)
 
-# return the output of command <show ip interface brief> as string
+def show_interfaces(device) -> list:
+    """ Returns the output of command <show ip interface brief>
 
+    Args:
+        device (str): Device IP address
 
-def show_interfaces(device):
+    Returns:
+        list: <show ip interface brief> output
+    """
     conn_handler = {
         'device_type': 'cisco_ios',
         'ip': device,
-        'username': username,
-        'password': password
+        'username': USERNAME,
+        'password': PASSWORD
     }
     net_connect = ConnectHandler(**conn_handler)
     return net_connect.send_command('show ip interface brief', use_textfsm=True)
 
-# return the list of interfaces with an IP address set on them
+def l3_interfaces_list(interfaces) -> list:
+    """ Returns the list of interfaces with an IP address set on them
 
+    Args:
+        interfaces (list): All interfaces
 
-def l3_interfaces_list(interfaces):
+    Returns:
+        list: Interfaces with IP address
+    """
     interface_list = []
     for interface in interfaces:
-        if interface['ipaddr']!="unassigned":
+        if interface['ipaddr'] != "unassigned":
             interface_list.append(interface['intf'])
     return interface_list
 
-# configure the interface configuration loaded form config.yml file on each device
-# before deploying any config it make a backup file via backup_config function
+def config_interfaces(device, interface_list) -> None:
+    """ Configures the interface configuration loaded form config.yml file
+        on each device before deploying any config it make a backup file
+        via backup_config function
 
-
-def config_interfaces(device, interface_list):
+    Args:
+        device (str): Device IP address
+        interface_list (list): Interfaces to be configured
+    """
     conn_handler = {
         'device_type': 'cisco_ios',
         'ip': device,
-        'username': username,
-        'password': password
+        'username': USERNAME,
+        'password': PASSWORD
     }
     net_connect = ConnectHandler(**conn_handler)
     backup_config(device)
     configs = load_config()
     for interface in interface_list:
-        interface_fullname = ''
-        interface_fullname = "interface {}".format(interface)
+        interface_fullname = f'interface {interface}'
         command = net_connect.send_config_set([interface_fullname] + configs)
         print(command)
 
@@ -124,8 +139,8 @@ if __name__ == "__main__":
     ##############################################################################################################################"""
 
     print(notice)
-    username = input("Please enter the username for devices: ").strip()
-    password = getpass(prompt = "Please enter password for devices: ")
+    USERNAME = input("Please enter the username for devices: ").strip()
+    PASSWORD = getpass(prompt="Please enter password for devices: ")
     devices = load_devices()
 
     for device_ip in devices:
