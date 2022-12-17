@@ -159,11 +159,11 @@ def backup_config(device) -> None:
         'password': PASSWORD
     }
     net_connect = ConnectHandler(**conn_handler)
-    folder = "config_backup_files"
-    if not os.path.isdir(folder):
-        os.makedirs(folder)
+    directory = "config_backup_files"
+    if not os.path.isdir(directory):
+        os.makedirs(directory)
     filename = f"{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}-{conn_handler['ip']}-backup.config"
-    with open(os.path.join(folder, filename), 'w', encoding="utf-8") as file:
+    with open(os.path.join(directory, filename), 'w', encoding="utf-8") as file:
         backup = net_connect.send_command("show running-config")
         file.write(backup)
 
@@ -192,11 +192,11 @@ def csv_report(data) -> None:
         data (dict): Interface, MAC, IP, Name data of active users
                      on each switch
     """
-    folder = "csv_reports"
-    if not os.path.isdir(folder):
-        os.makedirs(folder)
+    directory = "csv_reports"
+    if not os.path.isdir(directory):
+        os.makedirs(directory)
     file_name = f"{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}_switch_ports_report.csv"
-    with open(os.path.join(folder, file_name), 'w', encoding="utf-8", newline='') as file:
+    with open(os.path.join(directory, file_name), 'w', encoding="utf-8", newline='') as file:
         header_fields = ['Switch IP', 'Interface',
                          'MAC address', 'IP address', 'User']
         report_writer = csv.writer(file, delimiter=',')
@@ -216,9 +216,9 @@ def xls_report(data) -> None:
                      on each switch
     """
     header_fields = ['Interface', 'MAC address', 'IP address', 'User']
-    folder = "csv_reports"
-    if not os.path.isdir(folder):
-        os.makedirs(folder)
+    directory = "excel_reports"
+    if not os.path.isdir(directory):
+        os.makedirs(directory)
     file_name = f"{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}_switch_ports_report.xlsx"
     workbook = openpyxl.Workbook()
     sheet = workbook.active
@@ -228,31 +228,7 @@ def xls_report(data) -> None:
         sheet.append(header_fields)
         for row_data in value:
             sheet.append(row_data)
-    workbook.save(filename=os.path.join(folder, file_name))
-
-# def config_interfaces(device, interface_list) -> None:
-#    """ Configure the interface configuration loaded form config.yml file
-#        on each device before deploying any config it make a backup file via
-#        backup_config function
-#
-#    Args:
-#        device (str): Device IP address
-#        interface_list (list): Interfaces to be configured
-#    """
-#    conn_handler = {
-#        'device_type': 'cisco_ios',
-#        'ip': device,
-#        'username': USERNAME,
-#        'password': PASSWORD
-#    }
-#    net_connect = ConnectHandler(**conn_handler)
-#    backup_config(device)
-#    configs = load_config()
-#    for interface in interface_list:
-#        interface_fullname = ''
-#        interface_fullname = "interface {}".format(interface)
-#        command = net_connect.send_config_set([interface_fullname] + configs)
-#        print(command)
+    workbook.save(filename=os.path.join(directory, file_name))
 
 
 # MAIN function
@@ -268,10 +244,10 @@ if __name__ == "__main__":
     #                                                                               #
     #################################################################################"""
     print(NOTICE)
-    #USERNAME = input("Please enter the username for devices: ").strip()
-    USERNAME = 'm.maghsoudi'
-    #PASSWORD = getpass(prompt = "Please enter password for devices: ")
-    PASSWORD = '123qwe'
+    REPORT_TYPE= input(
+        "Which type of report do you prefer (xlsx/csv)? [Default: xlsx]:(x/c)").strip()
+    USERNAME = input("Please enter the username for devices: ").strip()
+    PASSWORD = getpass(prompt = "Please enter password for devices: ")
 
     configs = load_configuration()
     ARP = arp_table(configs['router'][0])
@@ -287,21 +263,9 @@ if __name__ == "__main__":
         switch_data[switch] = dns_query(
             switch_data[switch], configs['dns_servers'])
 
-    print('################################################################', sep='\n')
-    print(configs)
-    print('################################################################', sep='\n')
-    print(switch_data)
-    print('################################################################', sep='\n')
-
-    csv_report(switch_data)
-    xls_report(switch_data)
-
-    #    config_interfaces(device_ip, l3_interfaces)
-
-    # save_prompt = input(
-    #    "Are you sure to write configuration on Start-up conifuration? [y/n] (default=no)").strip()
-    # if save_prompt[0] == 'y' or save_prompt[0] == 'Y':
-    #    for device in devices:
-    #        write_startup_config(device)
-    # else:
-    #    print("Deplyed configurations has not been written on Startup configuration")
+    if REPORT_TYPE in ('c', 'C'):
+        csv_report(switch_data)
+        print("CSV report generated succefully")
+    else:
+        xls_report(switch_data)
+        print("Excel report generated succefully")
