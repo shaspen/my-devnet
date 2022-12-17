@@ -28,10 +28,10 @@ def load_configuration() -> dict:
     file_path = os.path.dirname(__file__)
     with open(os.path.join(file_path, "config.yml"), 'r', encoding="utf-8") as file:
         config = safe_load(file)
-        params['router'] = config['router']
-        params['switch'] = config['switch_list']
-        params['user_vlan'] = config['user_vlan']
-        params['dns_servers'] = config['dns_server_list']
+        params['router'] = sorted(config['router'])
+        params['switch'] = sorted(config['switch_list'])
+        params['user_vlan'] = sorted(config['user_vlan'])
+        params['dns_servers'] = sorted(config['dns_server_list'])
         return params
 
 
@@ -249,19 +249,19 @@ if __name__ == "__main__":
     USERNAME = input("Please enter the username for devices: ").strip()
     PASSWORD = getpass(prompt = "Please enter password for devices: ")
 
-    configs = load_configuration()
-    ARP = arp_table(configs['router'][0])
+    CONFIGS = load_configuration()
+    ARP = arp_table(CONFIGS['router'][0])
     switch_data = {}
 
-    for switch in configs['switch']:
-        switch_data[switch] = mac_table(switch, configs['user_vlan'])
+    for switch in CONFIGS['switch']:
+        switch_data[switch] = mac_table(switch, CONFIGS['user_vlan'])
 
-    for switch in configs['switch']:
+    for switch in CONFIGS['switch']:
         switch_data[switch] = ip_table(switch_data[switch], ARP)
 
-    for switch in configs['switch']:
+    for switch in CONFIGS['switch']:
         switch_data[switch] = dns_query(
-            switch_data[switch], configs['dns_servers'])
+            switch_data[switch], CONFIGS['dns_servers'])
 
     if REPORT_TYPE in ('c', 'C'):
         csv_report(switch_data)
