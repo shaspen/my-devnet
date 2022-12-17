@@ -14,6 +14,7 @@ from getpass import getpass
 from netmiko import ConnectHandler
 from yaml import safe_load
 
+
 def load_config() -> list:
     """ Loads interface configurations from config.yml file
 
@@ -24,6 +25,7 @@ def load_config() -> list:
         config = safe_load(file)
         return config['interface_configuration']
 
+
 def load_devices() -> list:
     """ Load device IPs from config.yml file
 
@@ -33,6 +35,7 @@ def load_devices() -> list:
     with open("config.yml", 'r', encoding="utf-8") as file:
         config = safe_load(file)
         return config['device_list']
+
 
 def backup_config(device) -> None:
     """ Backup running configuration to file
@@ -55,6 +58,7 @@ def backup_config(device) -> None:
         backup = net_connect.send_command("show running-config")
         file.write(backup)
 
+
 def write_startup_config(device) -> None:
     """ Writes running-config to startup-config
 
@@ -70,6 +74,7 @@ def write_startup_config(device) -> None:
     net_connect = ConnectHandler(**conn_handler)
     command = net_connect.send_command('write memory')
     print(command)
+
 
 def show_interfaces(device) -> list:
     """ Returns the output of command <show ip interface brief>
@@ -89,6 +94,7 @@ def show_interfaces(device) -> list:
     net_connect = ConnectHandler(**conn_handler)
     return net_connect.send_command('show ip interface brief', use_textfsm=True)
 
+
 def l3_interfaces_list(interfaces) -> list:
     """ Returns the list of interfaces with an IP address set on them
 
@@ -103,6 +109,7 @@ def l3_interfaces_list(interfaces) -> list:
         if interface['ipaddr'] != "unassigned":
             interface_list.append(interface['intf'])
     return interface_list
+
 
 def config_interfaces(device, interface_list) -> None:
     """ Configures the interface configuration loaded form config.yml file
@@ -131,15 +138,15 @@ def config_interfaces(device, interface_list) -> None:
 # MAIN function
 if __name__ == "__main__":
 
-    NOTICE = """    #############################################################################################
-    #                                                                                           #
-    # NOTICE: You are changing the configration on Cisco devices based on configuration         #
-    #         and devices declarted in config.yml file                                          #
-    #                                                                                           #
-    #         Please do not proceed if you do not know the effects of deplying                  #
-    #                         configurations you are applying.                                  #
-    #                                                                                           #
-    #############################################################################################"""
+    NOTICE = """    ###############################################################################
+    #                                                                             #
+    #     NOTICE: You are changing the configration on Cisco devices based on     #
+    #        configuration and devices declarted in config.yml file               #
+    #                                                                             #
+    #      Please do not proceed if you do not know the effects of deplying       #
+    #                     configurations you are applying.                        #
+    #                                                                             #
+    ###############################################################################"""
 
     print(NOTICE)
     USERNAME = input("Please enter the username for devices: ").strip()
