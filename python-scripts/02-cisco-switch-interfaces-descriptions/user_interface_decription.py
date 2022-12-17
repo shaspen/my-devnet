@@ -234,20 +234,20 @@ def xls_report(data) -> None:
 # MAIN function
 if __name__ == "__main__":
 
-    NOTICE="""    #################################################################################
-    #                                                                               #
-    #      NOTICE: You are changing the configration on Cisco devices based on      #
-    #         configuration and devices declarted in config.yml file                #
-    #                                                                               #
-    #       Please do not proceed if you do not know the effects of deplying        #
-    #                      configurations you are applying.                         #
-    #                                                                               #
-    #################################################################################"""
+    NOTICE = """    ###############################################################################
+    #                                                                             #
+    #     NOTICE: You are changing the configration on Cisco devices based on     #
+    #        configuration and devices declarted in config.yml file               #
+    #                                                                             #
+    #      Please do not proceed if you do not know the effects of deplying       #
+    #                     configurations you are applying.                        #
+    #                                                                             #
+    ###############################################################################"""
     print(NOTICE)
-    REPORT_TYPE= input(
+    REPORT_TYPE = input(
         "Which type of report do you prefer (xlsx/csv)? [Default: xlsx]:(x/c)").strip()
     USERNAME = input("Please enter the username for devices: ").strip()
-    PASSWORD = getpass(prompt = "Please enter password for devices: ")
+    PASSWORD = getpass(prompt="Please enter password for devices: ")
 
     CONFIGS = load_configuration()
     ARP = arp_table(CONFIGS['router'][0])
