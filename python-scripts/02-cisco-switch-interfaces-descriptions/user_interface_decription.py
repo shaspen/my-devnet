@@ -35,7 +35,7 @@ def load_configuration() -> dict:
         return params
 
 
-def arp_table(device) -> dict:
+def arp_table(device: str) -> dict:
     """arp_table function connects to a router and returns arp table of the router in dictionary
 
     Args:
@@ -58,7 +58,7 @@ def arp_table(device) -> dict:
     return result
 
 
-def mac_table(device, vlans) -> list:
+def mac_table(device: str, vlans: list) -> list:
     """mac_table function connects to switches and returns switch mac table
     for access ports with vlans defined in configuration file
 
@@ -96,7 +96,7 @@ def mac_table(device, vlans) -> list:
     return sorted(result)
 
 
-def ip_table(mac_tuple_list, arp_dict) -> list:
+def ip_table(mac_tuple_list: list, arp_dict: dict) -> list:
     """ ip table function uses result of mac table of switches and arp table of
         routers to cunstruct a list consist of port, mac and ip address of
         active devices on the switch port
@@ -118,7 +118,7 @@ def ip_table(mac_tuple_list, arp_dict) -> list:
     return result
 
 
-def dns_query(mac_ip_tuple_list, dns_servers) -> list:
+def dns_query(mac_ip_tuple_list: list, dns_servers: list) -> list:
     """ This function queries the ip addresses and add the stripped form of
         associated "A" record to data structure
 
@@ -146,7 +146,7 @@ def dns_query(mac_ip_tuple_list, dns_servers) -> list:
     return result
 
 
-def backup_config(device) -> None:
+def backup_config(device: str) -> None:
     """ Backup running configuration to file
 
     Args:
@@ -168,7 +168,7 @@ def backup_config(device) -> None:
         file.write(backup)
 
 
-def write_startup_config(device) -> None:
+def write_startup_config(device: str) -> None:
     """ Writes running-config to startup-config
 
     Args:
@@ -185,7 +185,7 @@ def write_startup_config(device) -> None:
     print(command)
 
 
-def csv_report(data) -> None:
+def csv_report(data: dict) -> None:
     """ Generates CSV file from proccessed data
 
     Args:
@@ -201,14 +201,14 @@ def csv_report(data) -> None:
                          'MAC address', 'IP address', 'User']
         report_writer = csv.writer(file, delimiter=',')
         report_writer.writerow(header_fields)
-
         for key, values in data.items():
             for value in values:
                 row = [key, *value]
                 report_writer.writerow(row)
+    print("CSV report generated succefully")
 
 
-def xls_report(data) -> None:
+def xls_report(data: dict) -> None:
     """ Generates Excel file from proccessed data in Tabs
 
     Args:
@@ -229,6 +229,31 @@ def xls_report(data) -> None:
         for row_data in value:
             sheet.append(row_data)
     workbook.save(filename=os.path.join(directory, file_name))
+    print("Excel report generated succefully")
+
+
+def write_descriptions(data: dict) -> None:
+    """ Writes interface description for switch ports
+
+    Args:
+        data (dict): Interface, MAC, IP, Name data of active users
+                     on each switch
+    """
+    for key, value in data.items():
+        backup_config(key)
+        conn_handler = {
+            'device_type': 'cisco_ios',
+            'ip': key,
+            'username': USERNAME,
+            'password': PASSWORD
+        }
+        net_connect = ConnectHandler(**conn_handler)
+        for interface_data in value:
+            interface_fullname = f'interface {interface_data[0]}'
+            interface_description = f'description {interface_data[3]}'
+            command = net_connect.send_config_set(
+                [interface_fullname, interface_description])
+            print(command)
 
 
 # MAIN function
@@ -245,7 +270,7 @@ if __name__ == "__main__":
     ###############################################################################"""
     print(NOTICE)
     REPORT_TYPE = input(
-        "Which type of report do you prefer (xlsx/csv)? [Default: xlsx]:(x/c)").strip()
+        "Which type of report do you prefer? [xlsx/csv] (Default: xlsx)").strip()
     USERNAME = input("Please enter the username for devices: ").strip()
     PASSWORD = getpass(prompt="Please enter password for devices: ")
 
@@ -263,9 +288,21 @@ if __name__ == "__main__":
         switch_data[switch] = dns_query(
             switch_data[switch], CONFIGS['dns_servers'])
 
-    if REPORT_TYPE in ('c', 'C'):
+    if REPORT_TYPE[0] in ('c', 'C'):
         csv_report(switch_data)
-        print("CSV report generated succefully")
     else:
         xls_report(switch_data)
-        print("Excel report generated succefully")
+
+    WRTIE_DESC = input(
+        "Do you want to configure user descriptions on switch ports? [y/n] (default=no) ").strip()
+    if WRTIE_DESC[0] in ('y', 'Y'):
+        write_descriptions(switch_data)
+        SAVE_PROMPT = input(
+            "Are you sure to write configuration on Start-up configuration? [y/n] (default=no) ").strip()
+        if SAVE_PROMPT[0] in ('y', 'Y'):
+            for switch_ip in switch_data:
+                write_startup_config(switch_ip)
+        else:
+            print("Deplyed configurations has not been written on Startup configuration")
+    else:
+        pass
