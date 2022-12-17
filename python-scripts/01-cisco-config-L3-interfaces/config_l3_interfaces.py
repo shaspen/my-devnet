@@ -37,7 +37,7 @@ def load_devices() -> list:
         return config['device_list']
 
 
-def backup_config(device) -> None:
+def backup_config(device: str) -> None:
     """ Backup running configuration to file
 
     Args:
@@ -59,7 +59,7 @@ def backup_config(device) -> None:
         file.write(backup)
 
 
-def write_startup_config(device) -> None:
+def write_startup_config(device: str) -> None:
     """ Writes running-config to startup-config
 
     Args:
@@ -76,7 +76,7 @@ def write_startup_config(device) -> None:
     print(command)
 
 
-def show_interfaces(device) -> list:
+def show_interfaces(device: str) -> list:
     """ Returns the output of command <show ip interface brief>
 
     Args:
@@ -95,7 +95,7 @@ def show_interfaces(device) -> list:
     return net_connect.send_command('show ip interface brief', use_textfsm=True)
 
 
-def l3_interfaces_list(interfaces) -> list:
+def l3_interfaces_list(interfaces: list) -> list:
     """ Returns the list of interfaces with an IP address set on them
 
     Args:
@@ -111,7 +111,7 @@ def l3_interfaces_list(interfaces) -> list:
     return interface_list
 
 
-def config_interfaces(device, interface_list) -> None:
+def config_interfaces(device: str, interface_list: list) -> None:
     """ Configures the interface configuration loaded form config.yml file
         on each device before deploying any config it make a backup file
         via backup_config function
@@ -151,17 +151,17 @@ if __name__ == "__main__":
     print(NOTICE)
     USERNAME = input("Please enter the username for devices: ").strip()
     PASSWORD = getpass(prompt="Please enter password for devices: ")
-    devices = load_devices()
+    DEVICES = load_devices()
 
-    for device_ip in devices:
+    for device_ip in DEVICES:
         interfaces_list = show_interfaces(device_ip)
         l3_interfaces = l3_interfaces_list(interfaces_list)
         config_interfaces(device_ip, l3_interfaces)
 
-    save_prompt = input(
+    SAVE_PROMPT = input(
         "Are you sure to write configuration on Start-up conifuration? [y/n] (default=no) ").strip()
-    if save_prompt[0] == 'y' or save_prompt[0] == 'Y':
-        for device_ip in devices:
+    if SAVE_PROMPT[0] in ('y', 'Y'):
+        for device_ip in DEVICES:
             write_startup_config(device_ip)
     else:
         print("Deplyed configurations has not been written on Startup configuration")
