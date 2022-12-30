@@ -3,8 +3,7 @@
    Cisco devices dclared in same config.yml file.
 
    Author: Masoud Maghsoudi
-   Github: https://github.com/shaspen
-   Gitlab: https://gitlab.com/shaspen
+   Github: https://github.com/masoud-maghsoudi
    Email:  masoud_maghsoudi@yahoo.com
 """
 
